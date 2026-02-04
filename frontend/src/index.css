@@ -1,0 +1,89 @@
+:root {
+  /* Backgrounds */
+  --color-bg: #fdf8f4;
+  --color-surface: #ffffff;
+  --color-surface-soft: #fff9f5;
+  --color-border: #f0e4db;
+  --color-border-light: #f7ede6;
+
+  /* Text */
+  --color-text: #26221f;
+  --color-text-warm: #4a3f38;
+  --color-text-muted: #8a7f76;
+  --color-text-soft: #a99d94;
+
+  /* Peach primary */
+  --color-primary: #f08b6d;
+  --color-primary-hover: #e87a5a;
+  --color-primary-soft: rgba(240, 139, 109, 0.12);
+
+  /* Secondary */
+  --color-secondary: #8b7e74;
+  --color-secondary-hover: #7a6e65;
+
+  /* Accents */
+  --color-warning: #f0c78d;
+  --color-warning-soft: rgba(240, 199, 141, 0.25);
+  --color-success: #7bc9a4;
+  --color-success-soft: rgba(123, 201, 164, 0.15);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(46, 42, 39, 0.04);
+  --shadow-sm: 0 2px 8px rgba(46, 42, 39, 0.06);
+  --shadow-md: 0 8px 24px rgba(46, 42, 39, 0.08);
+  --shadow-lg: 0 16px 48px rgba(46, 42, 39, 0.12);
+  --shadow-glow: 0 0 0 4px var(--color-primary-soft);
+
+  /* Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  font-family: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    #fdf8f4 0%,
+    #faf3ed 50%,
+    #f7efe8 100%
+  );
+  background-attachment: fixed;
+  color: var(--color-text);
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
