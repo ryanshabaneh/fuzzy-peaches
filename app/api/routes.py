@@ -1,9 +1,10 @@
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, Form
-from typing import Optional, List
+from fastapi import APIRouter, UploadFile, HTTPException, Depends, Form, Request
+from typing import Optional, List, Dict
 from pydantic import BaseModel
 from datetime import datetime
 from sqlalchemy.orm import Session
 import json
+import time
 
 from app.models.schemas import ResolutionResult
 from app.config.schemas import ResolverConfig
@@ -15,7 +16,30 @@ from app.models.db_models import ResolutionRunDB
 
 router = APIRouter()
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_RECORDS = 20_000
+RATE_LIMIT_MAX_REQUESTS = 10
+RATE_LIMIT_WINDOW_SECONDS = 60
+REQUEST_TIMESTAMPS_BY_IP: Dict[str, List[float]] = {}
+
+
+def enforce_resolve_rate_limit(request: Request) -> None:
+    """Best-effort in-memory rate limit for demo deployments."""
+    xff = request.headers.get("x-forwarded-for")
+    client_ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+
+    now = time.time()
+    cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+
+    timestamps = REQUEST_TIMESTAMPS_BY_IP.get(client_ip, [])
+    timestamps = [ts for ts in timestamps if ts > cutoff]
+
+    if len(timestamps) >= RATE_LIMIT_MAX_REQUESTS:
+        REQUEST_TIMESTAMPS_BY_IP[client_ip] = timestamps
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again later.")
+
+    timestamps.append(now)
+    REQUEST_TIMESTAMPS_BY_IP[client_ip] = timestamps
 
 
 class RunSummary(BaseModel):
@@ -38,9 +62,11 @@ async def get_default_config():
 
 @router.post("/resolve", response_model=ResolutionResult)
 async def resolve_entities(
+    request: Request,
     file: UploadFile,
     config_json: Optional[str] = Form(None),
     column_mapping_json: Optional[str] = Form(None),
+    _rate_limit: None = Depends(enforce_resolve_rate_limit),
     db: Session = Depends(get_db),
 ):
     """
@@ -50,6 +76,17 @@ async def resolve_entities(
     - config_json: Optional ResolverConfig as JSON string
     - column_mapping_json: Optional column mapping as JSON string
     """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Request body too large. Maximum file size: {MAX_FILE_SIZE // 1024 // 1024}MB"
+                )
+        except ValueError:
+            pass
+
     # Read file content
     contents = await file.read()
 
@@ -58,7 +95,7 @@ async def resolve_entities(
     # Validate file size
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400,
+            status_code=413,
             detail=f"File too large. Maximum size: {MAX_FILE_SIZE // 1024 // 1024}MB"
         )
 
@@ -104,6 +141,12 @@ async def resolve_entities(
         raise HTTPException(
             status_code=400,
             detail="No valid records found in file"
+        )
+
+    if len(records) > MAX_RECORDS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Too many records. Maximum allowed: {MAX_RECORDS}"
         )
 
     # Run pipeline
