@@ -71,15 +71,35 @@ configuration-driven and adjustable without code changes.
 ## Known Limitations
 
 - Limited semantic understanding (e.g., synonyms)
+- Some company-name variants (e.g., "Apple Inc." vs "Apple Incorporated") may
+  fall into the borderline/review band depending on thresholds and normalization,
+  since legal suffixes are handled differently (e.g., "inc" may be stripped while
+  "incorporated" remains). This is expected heuristic behavior and can be tuned
+  via thresholds or by extending the stopword list (e.g., adding "incorporated").
 - Blocking strategies trade recall for performance
 - Some transitive groups may contain borderline pairs (explicitly flagged)
 - No incremental updates; resolution runs are batch-based
 - Practical scale ~100k records without distributed processing
 
+## Benchmarks
+
+Synthetic dataset with 30% duplicates, measured on Apple Silicon (M-series):
+
+| Records | Blocking | Time (s) | Entities | Comparisons | Skipped |
+|---------|----------|----------|----------|-------------|---------|
+| 100     | OFF      | 0.03     | 67       | 4,950       | 0       |
+| 100     | ON       | <0.01    | 67       | 374         | 4,576   |
+| 1,000   | OFF      | 2.77     | 446      | 499,500     | 0       |
+| 1,000   | ON       | 0.23     | 446      | 31,952      | 467,548 |
+| 10,000  | OFF      | 299.04   | 951      | 49,995,000  | 0       |
+| 10,000  | ON       | 23.62    | 951      | 3,172,987   | 46,822,013 |
+
+Blocking uses `first_3_chars` + `artist` keys to generate candidate pairs. On this synthetic dataset (30% duplicates), blocking removes ~93% of pair comparisons with no change in entity count. Run `make bench` to reproduce.
+
 ## Testing
 
 ```bash
-pytest tests/ -v
+make test
 ```
 
 ## Project Structure

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 import time
 import uuid
 from typing import List, Dict, Tuple
@@ -14,6 +16,8 @@ from app.core.decision import decide_match
 from app.core.grouping import MatchGraph, find_connected_components
 from app.core.blocking import get_candidate_pairs
 from app.core.entity_builder import build_entity
+
+logger = logging.getLogger(__name__)
 
 
 class EntityPipeline:
@@ -36,6 +40,7 @@ class EntityPipeline:
 
     def resolve(self, records: List[Record]) -> ResolutionResult:
         """Run full resolution pipeline."""
+        logger.info("Starting resolution | records=%d", len(records))
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         timing = {}
         warnings = []
@@ -102,7 +107,7 @@ class EntityPipeline:
             timing_ms=timing
         )
 
-        return ResolutionResult(
+        result = ResolutionResult(
             run_id=run_id,
             entities=entities,
             rejected_records=rejected,
@@ -112,6 +117,17 @@ class EntityPipeline:
             stats=stats,
             config_used=config_used
         )
+
+        logger.info(
+            "Resolution complete | run_id=%s | records=%d | entities=%d | flagged=%d | timing_ms=%s",
+            result.run_id,
+            len(records),
+            len(result.entities),
+            len(result.flagged_entity_ids),
+            result.stats.timing_ms,
+        )
+
+        return result
 
     def _normalize_all(
         self,

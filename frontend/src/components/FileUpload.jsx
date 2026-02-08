@@ -12,6 +12,7 @@ export default function FileUpload({
   const [textColumn, setTextColumn] = useState('title');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sampleType, setSampleType] = useState('music');
   const fileInputRef = useRef(null);
 
   const highThreshold = config?.thresholds?.high_confidence ?? 0.85;
@@ -28,11 +29,10 @@ export default function FileUpload({
     e.preventDefault();
     if (!file) return;
 
-    const columnMapping = {
-      id: 'id',
-      text: textColumn,
-      artist: 'artist'
-    };
+    const columnMapping = { id: 'id', text: textColumn };
+    if (sampleType === 'music') {
+      columnMapping.artist = 'artist';
+    }
 
     onSubmit(file, config, columnMapping);
   };
@@ -123,14 +123,28 @@ export default function FileUpload({
           {!file && <div className="dropzone-hint">or click to browse</div>}
         </div>
 
-        <button
-          type="button"
-          className="btn btn-secondary btn-full"
-          onClick={() => setFile(onLoadSample())}
-          disabled={isLoading}
-        >
-          Load sample dataset
-        </button>
+        <div className="sample-row">
+          <select
+            className="form-input sample-select"
+            value={sampleType}
+            onChange={(e) => setSampleType(e.target.value)}
+            disabled={isLoading}
+          >
+            <option value="music">Music</option>
+            <option value="companies">Companies</option>
+          </select>
+          <button
+            type="button"
+            className="btn btn-secondary sample-btn"
+            onClick={() => {
+              setFile(onLoadSample(sampleType));
+              setTextColumn(sampleType === 'companies' ? 'name' : 'title');
+            }}
+            disabled={isLoading}
+          >
+            Load sample dataset
+          </button>
+        </div>
         <button
           type="submit"
           className="btn btn-primary btn-full"
@@ -193,6 +207,28 @@ export default function FileUpload({
                 onChange={(e) => updateLowThreshold(e.target.value)}
               />
               <p className="slider-help">Worth a second look</p>
+            </div>
+
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={config?.blocking?.enabled || false}
+                  onChange={(e) => onConfigChange({
+                    ...config,
+                    blocking: {
+                      ...config?.blocking,
+                      enabled: e.target.checked
+                    }
+                  })}
+                  disabled={isLoading}
+                />
+                Enable blocking (faster for large datasets)
+              </label>
+              <p className="form-hint">
+                Reduces comparisons by only matching records that share common attributes.
+                Recommended for datasets over 1,000 records.
+              </p>
             </div>
           </div>
         )}

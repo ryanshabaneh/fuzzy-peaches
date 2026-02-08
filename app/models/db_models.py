@@ -6,9 +6,6 @@ import json
 
 Base = declarative_base()
 
-# NOTE: SQLite stores JSON columns as TEXT. They are parsed at the application layer.
-# For production PostgreSQL, use the native JSONB type for better query performance.
-
 class ResolutionRunDB(Base):
     __tablename__ = "resolution_runs"
 
@@ -19,6 +16,7 @@ class ResolutionRunDB(Base):
     stats_json = Column(Text)
     warnings_json = Column(Text)
     errors_json = Column(Text)
+    result_json = Column(Text)  # Full ResolutionResult as JSON
 
     records = relationship("RecordDB", back_populates="run")
     entities = relationship("EntityDB", back_populates="run")

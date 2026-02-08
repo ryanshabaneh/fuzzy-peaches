@@ -1,17 +1,28 @@
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, Query, Form
-from typing import Optional, Dict
+from fastapi import APIRouter, UploadFile, HTTPException, Depends, Form
+from typing import Optional, List
+from pydantic import BaseModel
+from datetime import datetime
+from sqlalchemy.orm import Session
 import json
 
-from app.models.schemas import ResolutionResult, Entity
+from app.models.schemas import ResolutionResult
 from app.config.schemas import ResolverConfig
 from app.config.default import DEFAULT_CONFIG
 from app.loaders.factory import get_loader
 from app.core.pipeline import EntityPipeline
 from app.models.database import get_db, save_resolution_run
+from app.models.db_models import ResolutionRunDB
 
 router = APIRouter()
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+class RunSummary(BaseModel):
+    run_id: str
+    created_at: datetime
+    total_records: int
+    total_entities: int
 
 
 @router.get("/health")
@@ -30,6 +41,7 @@ async def resolve_entities(
     file: UploadFile,
     config_json: Optional[str] = Form(None),
     column_mapping_json: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
 ):
     """
     Upload CSV/JSON file and run entity resolution.
@@ -41,7 +53,6 @@ async def resolve_entities(
     # Read file content
     contents = await file.read()
 
-    # IMPORTANT: Reset stream position for potential re-reads
     await file.seek(0)
 
     # Validate file size
@@ -102,18 +113,36 @@ async def resolve_entities(
     # Add load warnings to result
     result.warnings = load_warnings + result.warnings
 
+    # Persist result
+    save_resolution_run(db, result)
+
     return result
 
 
+@router.get("/runs", response_model=List[RunSummary])
+async def list_runs(db: Session = Depends(get_db)):
+    """List all resolution runs with summary stats."""
+    runs = db.query(ResolutionRunDB).order_by(ResolutionRunDB.created_at.desc()).all()
+
+    summaries = []
+    for run in runs:
+        stats = json.loads(run.stats_json) if run.stats_json else {}
+        summaries.append(RunSummary(
+            run_id=run.id,
+            created_at=run.created_at,
+            total_records=stats.get("total_records", 0),
+            total_entities=stats.get("total_entities", 0),
+        ))
+
+    return summaries
+
+
 @router.get("/runs/{run_id}", response_model=ResolutionResult)
-async def get_run(run_id: str):
+async def get_run(run_id: str, db: Session = Depends(get_db)):
     """Get results of a previous resolution run."""
-    # TODO: Implement database lookup
-    raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    run = db.query(ResolutionRunDB).filter(ResolutionRunDB.id == run_id).first()
 
+    if not run or not run.result_json:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
-@router.get("/entities/{run_id}/{entity_id}", response_model=Entity)
-async def get_entity(run_id: str, entity_id: str):
-    """Get single entity with full details."""
-    # TODO: Implement database lookup
-    raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    return ResolutionResult.model_validate_json(run.result_json)

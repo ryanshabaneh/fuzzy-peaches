@@ -49,7 +49,7 @@ def decide_match(
         record_a_id=record_a_id,
         record_b_id=record_b_id,
         final_score=score,
-        signals=signals,
+        signals={k: v for k, v in signals.items() if v is not None},
         signals_used=signals_used,
         decision=decision,
         explanation=explanation

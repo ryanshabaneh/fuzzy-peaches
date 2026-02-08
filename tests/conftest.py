@@ -7,7 +7,8 @@ from app.config.default import DEFAULT_CONFIG
 @pytest.fixture
 def client():
     """FastAPI test client."""
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 @pytest.fixture
 def default_config():

@@ -65,8 +65,7 @@ class ResolutionResult(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     errors: List[str] = Field(default_factory=list)
     stats: ResolutionStats
-    config_used: 'ResolverConfig'  # Forward reference
+    config_used: 'ResolverConfig'
 
-# Import at end to avoid circular import
 from app.config.schemas import ResolverConfig
 ResolutionResult.model_rebuild()
