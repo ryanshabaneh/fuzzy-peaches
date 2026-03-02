@@ -1,5 +1,4 @@
 import logging
-logger = logging.getLogger(__name__)
 import time
 import uuid
 from typing import List, Dict, Tuple

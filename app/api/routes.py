@@ -41,6 +41,13 @@ def enforce_resolve_rate_limit(request: Request) -> None:
     timestamps.append(now)
     REQUEST_TIMESTAMPS_BY_IP[client_ip] = timestamps
 
+    # Evict stale IP entries when the dict grows large to prevent unbounded growth
+    if len(REQUEST_TIMESTAMPS_BY_IP) > 10_000:
+        stale = [ip for ip, ts_list in REQUEST_TIMESTAMPS_BY_IP.items()
+                 if not ts_list or ts_list[-1] <= cutoff]
+        for ip in stale:
+            del REQUEST_TIMESTAMPS_BY_IP[ip]
+
 
 class RunSummary(BaseModel):
     run_id: str
@@ -89,8 +96,6 @@ async def resolve_entities(
 
     # Read file content
     contents = await file.read()
-
-    await file.seek(0)
 
     # Validate file size
     if len(contents) > MAX_FILE_SIZE:

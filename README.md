@@ -59,6 +59,11 @@ and previewing configuration.
 - `GET /config/default` — fetch default resolver settings  
 - `GET /health` — service health check  
 
+Demo hardening:
+- CORS is restricted to `http://localhost:5173` and `https://fuzzy-peaches.vercel.app`.
+- `POST /resolve` rejects files over 5MB and payloads with more than 20,000 parsed records.
+- `POST /resolve` has an in-memory best-effort rate limit of 10 requests per 60s per client IP (supports `X-Forwarded-For`).
+
 All matching behavior (weights, thresholds, blocking strategies) is fully
 configuration-driven and adjustable without code changes.
 

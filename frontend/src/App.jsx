@@ -31,7 +31,7 @@ export default function App() {
     }
   };
 
-  if (!config) return <div className="app">Loading...</div>;
+  if (!config) return <div className="app">{error ? <p className="error">{error}</p> : 'Loading...'}</div>;
 
   return (
     <div className="app">

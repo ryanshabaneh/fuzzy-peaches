@@ -20,10 +20,19 @@ export async function resolveEntities(file, config, columnMapping) {
     formData.append('column_mapping_json', JSON.stringify(columnMapping));
   }
 
-  const response = await fetch(`${API_BASE}/resolve`, {
-    method: 'POST',
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/resolve`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const error = await response.json();
